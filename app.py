@@ -18,26 +18,6 @@ def load_token():
     else:
         return None
 
-# Fungsi untuk memperbarui token menggunakan refresh_token
-def refresh_access_token():
-    token = load_token()
-    url = 'https://oauth2.googleapis.com/token'
-    data = {
-        'client_id': '811953646580-ivufat7803bcc3cbh0hmqskpg0e9abkl.apps.googleusercontent.com',
-        'client_secret': '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',
-        'refresh_token': token['refresh_token'],
-        'grant_type': 'refresh_token'
-    }
-    response = requests.post(url, data=data)
-    if response.status_code == 200:
-        new_token = response.json()
-        token['access_token'] = new_token['access_token']
-        token['expires_in'] = new_token['expires_in']
-        save_token(token)
-        return token['access_token']
-    else:
-        raise Exception("Failed to refresh access token")
-
 # Fungsi untuk mengumpulkan informasi produk dari Amazon berdasarkan ASIN
 def scrape_amazon(asin, store_id):
     product_link = f"https://www.amazon.com/dp/{asin}?tag={store_id}"
