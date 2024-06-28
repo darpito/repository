@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Amazon Scraper & Blogger Poster</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+<nav class="navbar navbar-expand-lg navbar-light bg-light">
+    <a class="navbar-brand" href="/">Home</a>
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav">
+            <li class="nav-item">
+                <a class="nav-link" href="/">Home</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/submit_token">Submit Token</a>
+            </li>
+        </ul>
+    </div>
+</nav>
+<div class="container mt-4">
+    <h1>Amazon Scraper & Blogger Poster</h1>
+    <form id="asinForm">
+        <div class="form-group">
+            <label for="asins">ASIN List</label>
+            <textarea class="form-control" id="asins" rows="5" placeholder="Enter ASINs, one per line"></textarea>
+        </div>
+        <div class="form-group">
+            <label for="file">Upload ASIN File</label>
+            <input type="file" class="form-control-file" id="file">
+        </div>
+        <div class="form-group">
+            <label for="store_id">Amazon Store ID</label>
+            <input type="text" class="form-control" id="store_id" placeholder="Enter Amazon Store ID">
+        </div>
+        <div class="form-group">
+            <label for="blog_id">Blog ID</label>
+            <input type="text" class="form-control" id="blog_id" placeholder="Enter Blog ID">
+        </div>
+        <button type="submit" class="btn btn-primary">Submit</button>
+    </form>
+    <div id="results" class="mt-4"></div>
+</div>
+<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+<script>
+    $(document).ready(function() {
+        $('#asinForm').submit(function(event) {
+            event.preventDefault();
+            var asins = $('#asins').val().trim().split("\n");
+            var store_id = $('#store_id').val().trim();
+            var blog_id = $('#blog_id').val().trim();
+            
+            var fileInput = $('#file')[0];
+            if (fileInput.files.length > 0) {
+                var file = fileInput.files[0];
+                var reader = new FileReader();
+                reader.onload = function(e) {
+                    asins = e.target.result.split("\n").map(line => line.trim()).filter(line => line);
+                    postToBlog(asins, store_id, blog_id);
+                };
+                reader.readAsText(file);
+            } else {
+                postToBlog(asins, store_id, blog_id);
+            }
+        });
+
+        function postToBlog(asins, store_id, blog_id) {
+            $.ajax({
+                url: '/post_to_blog',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    asins: asins,
+                    store_id: store_id,
+                    blog_id: blog_id
+                }),
+                success: function(response) {
+                    $('#results').empty();
+                    response.forEach(function(result) {
+                        var asin = Object.keys(result)[0];
+                        var data = result[asin];
+                        if (data.error) {
+                            showAlert(`Failed to post ASIN ${asin}: ${data.error}`, 'danger');
+                        } else {
+                            showAlert(`Successfully posted: ${data.title}`, 'success');
+                        }
+                    });
+                },
+                error: function(jqXHR, textStatus, errorThrown) {
+                    showAlert('Failed to create posts: ' + textStatus + ' - ' + errorThrown, 'danger');
+                }
+            });
+        }
+
+        function showAlert(message, type) {
+            var alertHtml = '<div class="alert alert-' + type + ' alert-dismissible fade show" role="alert">' +
+                            message +
+                            '<button type="button" class="close" data-dismiss="alert" aria-label="Close">' +
+                            '<span aria-hidden="true">&times;</span>' +
+                            '</button>' +
+                            '</div>';
+            $('#results').prepend(alertHtml);
+        }
+    });
+</script>
+</body>
+</html>

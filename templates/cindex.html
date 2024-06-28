@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Amazon to Blogger</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+<nav class="navbar navbar-expand-lg navbar-light bg-light">
+    <a class="navbar-brand" href="/">Home</a>
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav">
+            <li class="nav-item">
+                <a class="nav-link" href="/">Home</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/submit_token">Submit Token</a>
+            </li>
+        </ul>
+    </div>
+</nav>
+<div class="container mt-4">
+    <h1>Amazon to Blogger</h1>
+    <form id="asinForm">
+        <div class="form-group">
+            <label for="store_id">Amazon Store ID</label>
+            <input type="text" class="form-control" id="store_id" required>
+        </div>
+        <div class="form-group">
+            <label for="blog_id">Blogger Blog ID</label>
+            <input type="text" class="form-control" id="blog_id" required>
+        </div>
+        <div class="form-group">
+            <label for="asin_list">ASIN List (one per line)</label>
+            <textarea class="form-control" id="asin_list" rows="10" placeholder="Enter ASINs, one per line" required></textarea>
+        </div>
+        <div class="form-group">
+            <label for="asin_file">Or upload ASIN file</label>
+            <input type="file" class="form-control-file" id="asin_file" accept=".txt">
+        </div>
+        <button type="submit" class="btn btn-primary">Submit</button>
+    </form>
+    <div id="results" class="mt-4"></div>
+</div>
+<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+<script>
+    $(document).ready(function() {
+        $('#asin_file').change(function() {
+            var file = this.files[0];
+            if (file) {
+                var reader = new FileReader();
+                reader.onload = function(e) {
+                    $('#asin_list').val(e.target.result.trim());
+                };
+                reader.readAsText(file);
+            }
+        });
+
+        $('#asinForm').submit(function(event) {
+            event.preventDefault();
+            var asins = $('#asin_list').val().trim().split("\n").map(function(asin) {
+                return asin.trim();
+            }).filter(function(asin) {
+                return asin.length > 0;
+            });
+            var store_id = $('#store_id').val().trim();
+            var blog_id = $('#blog_id').val().trim();
+
+            if (asins.length === 0 || !store_id || !blog_id) {
+                showAlert('Please fill all fields and ensure ASIN list is not empty.', 'danger');
+                return;
+            }
+
+            $.ajax({
+                url: '/post_to_blog',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    asins: asins,
+                    store_id: store_id,
+                    blog_id: blog_id
+                }),
+                success: function(response) {
+                    showAlert('Posts created successfully!', 'success');
+                    $('#results').html('<pre>' + JSON.stringify(response, null, 2) + '</pre>');
+                },
+                error: function(jqXHR, textStatus, errorThrown) {
+                    showAlert('Failed to create posts: ' + errorThrown, 'danger');
+                    $('#results').html('<pre>' + textStatus + ': ' + errorThrown + '</pre>');
+                }
+            });
+        });
+
+        function showAlert(message, type) {
+            var alertHtml = '<div class="alert alert-' + type + ' alert-dismissible fade show" role="alert">' +
+                            message +
+                            '<button type="button" class="close" data-dismiss="alert" aria-label="Close">' +
+                            '<span aria-hidden="true">&times;</span>' +
+                            '</button>' +
+                            '</div>';
+            $('.container').prepend(alertHtml);
+        }
+    });
+</script>
+</body>
+</html>
